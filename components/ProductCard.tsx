@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
-import { Product } from '../../lib/api';
+import { Product } from '@/lib/api';
 
 interface ProductCardProps {
   product: Product;

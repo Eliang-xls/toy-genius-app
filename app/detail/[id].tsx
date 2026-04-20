@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator, Linking } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { fetchProductDetail, Product } from '../../lib/api';
+import { fetchProductDetail, Product } from '@/lib/api';
 
 // 8D score radar dimensions
 const DIMENSIONS = [

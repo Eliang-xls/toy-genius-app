@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, ActivityIndicator, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import ProductCard from '../components/ProductCard';
-import { fetchProducts, Product, AgeFilter } from '../lib/api';
+import ProductCard from '@/components/ProductCard';
+import { fetchProducts, Product, AgeFilter } from '@/lib/api';
 
 const AGE_FILTERS: { label: string; value: AgeFilter }[] = [
   { label: 'All', value: 'all' },

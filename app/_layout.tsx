@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { useFonts, PlayfairDisplay_600SemiBold, PlayfairDisplay_700Bold } from '@expo-google-fonts/playfair-display';
 import * as SplashScreen from 'expo-splash-screen';
-import ErrorBoundary from '../components/ErrorBoundary';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 // Keep splash visible while fonts load
 SplashScreen.preventAutoHideAsync();
