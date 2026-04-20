@@ -19,6 +19,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 export interface Product {
   id: string;
   name_display: string;
+  image_url: string | null;
   age_min_yr: number;
   age_max_yr: number;
   price_tier: number;
@@ -29,6 +30,14 @@ export interface Product {
   gender_preference: string;
   safety_concern: string[];
   brand_name: string;
+  ai_description: string | null;
+  safety_score: number | null;
+  certifications: any;
+  user_feedback_analysis: any;
+  cross_validation: any;
+  safety_notes: string | null;
+  safety_scoring_rationale: string | null;
+  has_safety_data: boolean;
   base_score: string;
   d_safety: string;
   d_education: string;
