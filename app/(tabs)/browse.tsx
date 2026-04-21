@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, Pressable, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import ProductCard from '@/components/ProductCard';
 import { fetchProducts, Product, AgeFilter } from '@/lib/api';
+import { useSlot } from '@/lib/contexts/SlotContext';
 
 const AGE_FILTERS: { label: string; value: AgeFilter }[] = [
   { label: 'All', value: 'all' },
@@ -22,6 +23,7 @@ export default function BrowseScreen() {
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { slotCount, addProduct, isProductInSlot } = useSlot();
 
   const loadProducts = useCallback(async (filter: AgeFilter, currentOffset: number, append: boolean) => {
     try {
@@ -64,6 +66,38 @@ export default function BrowseScreen() {
     setProducts([]);
   };
 
+  const handleAddToSlot = async (productId: string) => {
+    // Check if already in slot
+    if (isProductInSlot(productId)) {
+      Alert.alert('Already in Slot', 'This toy is already in your slot.', [{ text: 'OK' }]);
+      return;
+    }
+    
+    // Check if slots full
+    if (slotCount >= 4) {
+      Alert.alert(
+        'Slots Full',
+        'You have 4 toys in your slots. Remove one first.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Go to Slots', onPress: () => router.push('/(tabs)/slot') },
+        ]
+      );
+      return;
+    }
+    
+    // Attempt to add
+    const success = await addProduct(productId);
+    if (success) {
+      // Show success feedback (optional haptic)
+      // For now, just console.log
+      console.log(`Product ${productId} added to slot`);
+    } else {
+      // Fallback error
+      Alert.alert('Error', 'Could not add toy to slot. Please try again.', [{ text: 'OK' }]);
+    }
+  };
+
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-surface">
@@ -90,8 +124,14 @@ export default function BrowseScreen() {
 
   return (
     <View className="flex-1 bg-surface">
-      {/* Age Stage Filter */}
+      {/* Age Stage Filter + Slot Indicator */}
       <View className="h-11 px-4 flex-row items-center gap-2">
+        {/* Slot Indicator */}
+        <View className="bg-accent rounded-full px-2 py-1">
+          <Text className="text-xs text-white font-label">
+            Slots: {slotCount}/4
+          </Text>
+        </View>
         {AGE_FILTERS.map(f => (
           <Pressable
             key={f.value}
@@ -116,12 +156,14 @@ export default function BrowseScreen() {
         data={products}
         keyExtractor={item => item.id}
         numColumns={2}
-        columnWrapperStyle={{ justifyContent: 'space-between', paddingHorizontal: 16 }}
+        columnWrapperStyle={{ justifyContent: 'flex-start', paddingHorizontal: 16, gap: 12 }}
         contentContainerStyle={{ paddingTop: 12, paddingBottom: 80 }}
         renderItem={({ item }) => (
           <ProductCard
             product={item}
             onPress={() => router.push(`/detail/${item.id}`)}
+            showAddToSlot={slotCount < 4 && !isProductInSlot(item.id)}
+            onAddToSlot={handleAddToSlot}
           />
         )}
         ListEmptyComponent={

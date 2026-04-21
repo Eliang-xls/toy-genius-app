@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { useFonts, PlayfairDisplay_600SemiBold, PlayfairDisplay_700Bold } from '@expo-google-fonts/playfair-display';
 import * as SplashScreen from 'expo-splash-screen';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import { SlotProvider } from '@/lib/contexts/SlotContext';
 
 // Keep splash visible while fonts load
 SplashScreen.preventAutoHideAsync();
@@ -25,11 +26,13 @@ export default function RootLayout() {
 
   return (
     <ErrorBoundary>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
-      </Stack>
+      <SlotProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(tabs)" />
+        </Stack>
+      </SlotProvider>
     </ErrorBoundary>
   );
 }

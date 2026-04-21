@@ -14,12 +14,28 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
+// Get public URL for product image from Supabase Storage
+// Images stored in 'product-images' bucket: {productId}/{size}.{ext}
+// Format priority: webp (89% coverage) > png (8%) > jpg (6%)
+// Usage: getProductImageUrl(id) for card, getProductImageUrl(id, '600') for detail
+export function getProductImageUrl(
+  productId: string,
+  size: '300' | '600' | '1000' | 'original' = '300',
+  format: 'webp' | 'png' | 'jpg' = 'webp'
+): string | null {
+  if (!productId) return null;
+  const { data } = supabase.storage
+    .from('product-images')
+    .getPublicUrl(`${productId}/${size}.${format}`);
+  return data?.publicUrl || null;
+}
+
 // === API Functions ===
 
 export interface Product {
   id: string;
   name_display: string;
-  image_url: string | null;
+  image_url: string | null;  // Kept for backwards compat, but use getProductImageUrl() for Storage URLs
   age_min_yr: number;
   age_max_yr: number;
   price_tier: number;

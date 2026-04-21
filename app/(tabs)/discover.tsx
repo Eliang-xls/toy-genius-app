@@ -2,13 +2,14 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   Dimensions,
   Pressable,
   Animated,
   ActivityIndicator,
 } from 'react-native';
-import { supabase, Product } from '@/lib/api';
+import { supabase, Product, getProductImageUrl } from '@/lib/api';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.25;
@@ -20,6 +21,7 @@ export default function DiscoverScreen() {
   const [loading, setLoading] = useState(true);
   const [liked, setLiked] = useState<string[]>([]);
   const [passed, setPassed] = useState<string[]>([]);
+  const [imageError, setImageError] = useState(false);
 
   const translateX = useRef(new Animated.Value(0)).current;
   const rotate = translateX.interpolate({
@@ -31,6 +33,10 @@ export default function DiscoverScreen() {
   useEffect(() => {
     loadDailyPicks();
   }, []);
+
+  useEffect(() => {
+    setImageError(false);
+  }, [currentIndex]);
 
   const loadDailyPicks = async () => {
     try {
@@ -102,8 +108,11 @@ export default function DiscoverScreen() {
     );
   }
 
+  const imageUrl = getProductImageUrl(currentProduct.id);
   const score = parseFloat(currentProduct.base_score);
-  const ageLabel = `${currentProduct.age_min_yr}-${currentProduct.age_max_yr}yr`;
+  const ageMin = parseFloat(String(currentProduct.age_min_yr));
+  const ageMax = parseFloat(String(currentProduct.age_max_yr));
+  const ageLabel = ageMin >= ageMax ? `${ageMax}+yr` : `${ageMin}-${ageMax}yr`;
 
   return (
     <View style={styles.container}>
@@ -126,7 +135,16 @@ export default function DiscoverScreen() {
       >
         {/* Product Hero */}
         <View style={styles.heroArea}>
-          <Text style={styles.heroEmoji}>🧸</Text>
+          {imageUrl && !imageError ? (
+            <Image
+              source={{ uri: imageUrl }}
+              style={styles.heroImage}
+              resizeMode="cover"
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <Text style={styles.heroEmoji}>🧸</Text>
+          )}
         </View>
 
         {/* Product Info */}
@@ -273,6 +291,10 @@ const styles = StyleSheet.create({
   },
   heroEmoji: {
     fontSize: 80,
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
   },
   infoArea: {
     padding: 20,
