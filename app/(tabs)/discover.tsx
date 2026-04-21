@@ -8,20 +8,29 @@ import {
   Pressable,
   Animated,
   ActivityIndicator,
+  FlatList,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { supabase, Product, getProductImageUrl } from '@/lib/api';
+import ViewToggle, { ViewMode } from '@/components/ViewToggle';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.25;
+const GRID_COLUMNS = 2;
+const GRID_ITEM_SPACING = 12;
 
-// Daily Discover — Tinder-style Like/Pass (方案 D)
+// Daily Discover — Tinder + Feed Hybrid (R5-08)
 export default function DiscoverScreen() {
+  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [liked, setLiked] = useState<string[]>([]);
   const [passed, setPassed] = useState<string[]>([]);
   const [imageError, setImageError] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('tinder');
+  const [feedPage, setFeedPage] = useState(0);
+  const [feedLoading, setFeedLoading] = useState(false);
 
   const translateX = useRef(new Animated.Value(0)).current;
   const rotate = translateX.interpolate({
@@ -31,30 +40,28 @@ export default function DiscoverScreen() {
   });
 
   useEffect(() => {
-    loadDailyPicks();
+    loadProducts();
   }, []);
 
   useEffect(() => {
     setImageError(false);
   }, [currentIndex]);
 
-  const loadDailyPicks = async () => {
+  const loadProducts = async () => {
     try {
       setLoading(true);
-      // Fetch random high-scored products for daily picks
       const { data, error } = await supabase
         .from('mv_product_browse')
         .select('*')
         .gte('base_score', '70')
         .order('base_score', { ascending: false })
-        .limit(20);
+        .limit(50);
 
       if (error) throw error;
-      // Shuffle for variety
       const shuffled = (data || []).sort(() => Math.random() - 0.5);
-      setProducts(shuffled.slice(0, 10));
+      setProducts(shuffled);
     } catch (err) {
-      console.error('Load daily picks error:', err);
+      console.error('Load products error:', err);
     } finally {
       setLoading(false);
     }
@@ -84,6 +91,67 @@ export default function DiscoverScreen() {
 
   const currentProduct = products[currentIndex];
 
+  // Feed Item Component for Grid View
+  const FeedItem = useCallback(({ item }: { item: Product }) => {
+    const imageUrl = getProductImageUrl(item.id);
+    const score = parseFloat(item.base_score);
+    const isFav = liked.includes(item.id);
+
+    return (
+      <Pressable
+        style={styles.feedItem}
+        onPress={() => router.push(`/detail/${item.id}`)}
+      >
+        <View style={styles.feedImageContainer}>
+          {imageUrl ? (
+            <Image source={{ uri: imageUrl }} style={styles.feedImage} resizeMode="cover" />
+          ) : (
+            <Text style={styles.feedEmoji}>🧸</Text>
+          )}
+          {isFav && (
+            <View style={styles.feedFavBadge}>
+              <Text>❤️</Text>
+            </View>
+          )}
+        </View>
+        <View style={styles.feedInfo}>
+          <Text style={styles.feedName} numberOfLines={2}>{item.name_display}</Text>
+          <Text style={styles.feedBrand} numberOfLines={1}>{item.brand_name}</Text>
+          <View style={styles.feedScoreRow}>
+            <Text style={styles.feedScore}>⭐ {score.toFixed(0)}</Text>
+            {item.scraped_price && (
+              <Text style={styles.feedPrice}>${item.scraped_price}</Text>
+            )}
+          </View>
+        </View>
+      </Pressable>
+    );
+  }, [liked]);
+
+  // Feed View Component
+  const FeedView = useCallback(() => {
+    const feedProducts = products.slice(0, 30); // Show top 30 in feed
+
+    return (
+      <FlatList
+        data={feedProducts}
+        renderItem={({ item }) => <FeedItem item={item} />}
+        keyExtractor={(item) => item.id}
+        numColumns={GRID_COLUMNS}
+        contentContainerStyle={styles.feedContainer}
+        columnWrapperStyle={styles.feedRow}
+        showsVerticalScrollIndicator={false}
+        onRefresh={loadProducts}
+        refreshing={feedLoading}
+        ListEmptyComponent={
+          <View style={styles.center}>
+            <Text style={styles.emptyText}>No products found</Text>
+          </View>
+        }
+      />
+    );
+  }, [products, FeedItem, feedLoading, loadProducts]);
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -93,44 +161,84 @@ export default function DiscoverScreen() {
     );
   }
 
-  if (!currentProduct) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.emoji}>🎉</Text>
-        <Text style={styles.doneTitle}>All caught up!</Text>
-        <Text style={styles.doneSub}>
-          You liked {liked.length} toys today
-        </Text>
-        <Pressable style={styles.refreshBtn} onPress={() => { setCurrentIndex(0); loadDailyPicks(); }}>
-          <Text style={styles.refreshText}>Refresh Picks</Text>
-        </Pressable>
-      </View>
-    );
-  }
-
-  const imageUrl = getProductImageUrl(currentProduct.id);
-  const score = parseFloat(currentProduct.base_score);
-  const ageMin = parseFloat(String(currentProduct.age_min_yr));
-  const ageMax = parseFloat(String(currentProduct.age_max_yr));
-  const ageLabel = ageMin >= ageMax ? `${ageMax}+yr` : `${ageMin}-${ageMax}yr`;
-
+  // Main render with ViewToggle
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Daily Discover</Text>
+        <Text style={styles.headerTitle}>Discover</Text>
         <Text style={styles.headerSub}>
-          {currentIndex + 1} / {products.length}
+          {viewMode === 'tinder' ? 'Daily curated picks' : `Browse top ${products.length} toys`}
         </Text>
       </View>
 
-      {/* Card */}
+      {/* View Toggle */}
+      <ViewToggle mode={viewMode} onChange={setViewMode} />
+
+      {/* Content */}
+      {viewMode === 'tinder' ? (
+        // Tinder Mode
+        !currentProduct ? (
+          <View style={styles.center}>
+            <Text style={styles.emoji}>🎉</Text>
+            <Text style={styles.doneTitle}>All caught up!</Text>
+            <Text style={styles.doneSub}>
+              You liked {liked.length} toys today
+            </Text>
+            <Pressable style={styles.refreshBtn} onPress={() => { setCurrentIndex(0); loadProducts(); }}>
+              <Text style={styles.refreshText}>Refresh Picks</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <TinderCard product={currentProduct} />
+        )
+      ) : (
+        // Feed Mode
+        <FeedView />
+      )}
+    </View>
+  );
+}
+
+// Tinder Card Component (extracted from original)
+function TinderCard({ product }: { product: Product }) {
+  const [imageError, setImageError] = useState(false);
+  const translateX = useRef(new Animated.Value(0)).current;
+  
+  // Animation setup
+  const rotate = translateX.interpolate({
+    inputRange: [-SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2],
+    outputRange: ['-10deg', '0deg', '10deg'],
+    extrapolate: 'clamp',
+  });
+
+  useEffect(() => {
+    translateX.setValue(0);
+  }, [product.id]);
+
+  const handleSwipe = (direction: 'left' | 'right') => {
+    Animated.timing(translateX, {
+      toValue: direction === 'right' ? SCREEN_WIDTH : -SCREEN_WIDTH,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      // Animation complete - parent handles state
+      translateX.setValue(0);
+    });
+  };
+
+  const imageUrl = getProductImageUrl(product.id);
+  const score = parseFloat(product.base_score);
+  const ageMin = parseFloat(String(product.age_min_yr));
+  const ageMax = parseFloat(String(product.age_max_yr));
+  const ageLabel = ageMin >= ageMax ? `${ageMax}+yr` : `${ageMin}-${ageMax}yr`;
+
+  return (
+    <>
       <Animated.View
         style={[
           styles.card,
-          {
-            transform: [{ translateX }, { rotate }],
-          },
+          { transform: [{ translateX }, { rotate }] },
         ]}
       >
         {/* Product Hero */}
@@ -149,39 +257,28 @@ export default function DiscoverScreen() {
 
         {/* Product Info */}
         <View style={styles.infoArea}>
-          <Text style={styles.productName}>{currentProduct.name_display}</Text>
+          <Text style={styles.productName}>{product.name_display}</Text>
           <Text style={styles.brandName}>
-            {currentProduct.brand_name} • {ageLabel}
+            {product.brand_name} • {ageLabel}
           </Text>
 
-          {/* Score Badge */}
           <View style={styles.scoreBadge}>
             <Text style={styles.scoreText}>⭐ {score.toFixed(1)}/100</Text>
           </View>
 
-          {/* Price */}
-          {currentProduct.scraped_price && (
-            <Text style={styles.price}>${currentProduct.scraped_price}</Text>
+          {product.scraped_price && (
+            <Text style={styles.price}>${product.scraped_price}</Text>
           )}
 
-          {/* Categories */}
-          {currentProduct.product_category && (
+          {product.product_category && (
             <View style={styles.tagRow}>
-              {currentProduct.product_category.slice(0, 3).map((cat, i) => (
+              {product.product_category.slice(0, 3).map((cat, i) => (
                 <View key={i} style={styles.tag}>
                   <Text style={styles.tagText}>{cat}</Text>
                 </View>
               ))}
             </View>
           )}
-        </View>
-
-        {/* Swipe Indicators */}
-        <View style={[styles.indicator, styles.likeIndicator, { opacity: 0 }]}>
-          <Text style={styles.indicatorText}>LIKE ❤️</Text>
-        </View>
-        <View style={[styles.indicator, styles.passIndicator, { opacity: 0 }]}>
-          <Text style={styles.indicatorText}>PASS 👋</Text>
         </View>
       </Animated.View>
 
@@ -204,9 +301,8 @@ export default function DiscoverScreen() {
         </Pressable>
       </View>
 
-      {/* Progress */}
       <Text style={styles.whyText}>Why this pick? Tap card for details →</Text>
-    </View>
+    </>
   );
 }
 
@@ -388,12 +484,12 @@ const styles = StyleSheet.create({
   passBtn: {
     backgroundColor: '#FFFFFF',
     borderWidth: 2,
-    borderColor: '#FCA5A5',
+    borderColor: '#94A3B8',
   },
   likeBtn: {
     backgroundColor: '#FEE2E2',
     borderWidth: 2,
-    borderColor: '#FCA5A5',
+    borderColor: '#F87171',
   },
   actionEmoji: {
     fontSize: 28,
@@ -408,5 +504,82 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#94A3B8',
     marginTop: 24,
+  },
+  // Feed View Styles
+  feedContainer: {
+    paddingHorizontal: GRID_ITEM_SPACING,
+    paddingBottom: 20,
+  },
+  feedRow: {
+    justifyContent: 'space-between',
+  },
+  feedItem: {
+    width: (SCREEN_WIDTH - GRID_ITEM_SPACING * 3) / GRID_COLUMNS,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginBottom: GRID_ITEM_SPACING,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  feedImageContainer: {
+    height: 140,
+    backgroundColor: '#F5F5F4',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  feedImage: {
+    width: '100%',
+    height: '100%',
+  },
+  feedEmoji: {
+    fontSize: 48,
+  },
+  feedFavBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 4,
+  },
+  feedInfo: {
+    padding: 12,
+  },
+  feedName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1C1917',
+    lineHeight: 18,
+  },
+  feedBrand: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 4,
+  },
+  feedScoreRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  feedScore: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#A16207',
+  },
+  feedPrice: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1C1917',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 40,
   },
 });
