@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+  <!-- Main star shape -->
+  <polygon points="24,8 29,20 42,20 32,28 36,40 24,32 12,40 16,28 6,20 19,20" 
+           fill="url(#silverGradient)" 
+           stroke="#757575" 
+           stroke-width="1.5"/>
+  <!-- Center inset -->
+  <circle cx="24" cy="24" r="8" fill="#F5F5F5"/>
+  <!-- Small crown icon -->
+  <path d="M20 22l4-4 4 4M22 22v4M26 22v4" stroke="#BDBDBD" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Gradient -->
+  <defs>
+    <linearGradient id="silverGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#EEEEEE;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#BDBDBD;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+</svg>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, Image } from 'react-native';
 import { Product, getProductImageUrl } from '@/lib/api';
+import { Icon } from '@/components/Icon';
 
 interface ProductCardProps {
   product: Product;
@@ -117,7 +118,7 @@ export default function ProductCard({ product, onPress, isFavorited = false, onF
           <Pressable
             onPress={() => onAddToSlot(product.id)}
             hitSlop={8}
-            className="absolute bottom-2 left-2 z-10 bg-accent rounded-full w-6 h-6 items-center justify-center"
+            className="absolute bottom-2 left-2 z-10 bg-accent rounded-full p-2"
             style={{
               shadowColor: '#000',
               shadowOffset: { width: 0, height: 1 },
@@ -126,7 +127,11 @@ export default function ProductCard({ product, onPress, isFavorited = false, onF
               elevation: 2,
             }}
           >
-            <Text className="text-white text-xs font-bold">+</Text>
+            <Icon 
+              name="slot_add" 
+              size="sm"
+              accessibilityLabel={`Add ${product.name_display} to slot`}
+            />
           </Pressable>
         )}
       </View>

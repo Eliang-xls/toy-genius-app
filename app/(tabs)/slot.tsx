@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchProducts, Product, AgeFilter, getProductImageUrl } from '@/lib/api';
+import { Icon } from '@/components/Icon';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -166,7 +167,7 @@ function SlotBox({
             style={{ transform: [{ scale }] }}
           >
             <View className="w-10 h-10 rounded-full bg-accent items-center justify-center mb-1">
-              <Text className="text-2xl text-white">+</Text>
+              <Icon name="slot_add" size="sm" accessibilityLabel="Add toy to slot" />
             </View>
             <Text className="text-label text-text-muted font-body">Add Toy</Text>
           </Animated.View>
