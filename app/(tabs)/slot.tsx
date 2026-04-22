@@ -386,7 +386,7 @@ function ProductPickerModal({
 
         {loading ? (
           <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color="#A16207" />
+            <ActivityIndicator size="large" color="#5D4037" />
             <Text className="mt-4 text-body-md text-text-secondary">
               Loading toys...
             </Text>
@@ -647,7 +647,7 @@ export default function SlotScreen() {
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-surface">
-        <ActivityIndicator size="large" color="#A16207" />
+        <ActivityIndicator size="large" color="#5D4037" />
       </View>
     );
   }

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/api';
+import { Icon } from '@/components/Icon';
 
 interface Achievement {
   id: string;
@@ -16,11 +17,11 @@ interface Achievement {
   educational_message: string | null;
 }
 
-const TIER_CONFIG: Record<string, { label: string; icon: string; color: string; bg: string }> = {
-  'bronze': { label: 'Bronze', icon: '🥉', color: '#CD7F32', bg: 'bg-amber-50' },
-  'silver': { label: 'Silver', icon: '🥈', color: '#94A3B8', bg: 'bg-gray-50' },
-  'gold': { label: 'Gold', icon: '🥇', color: '#A16207', bg: 'bg-amber-50' },
-  'diamond': { label: 'Diamond', icon: '💎', color: '#312E81', bg: 'bg-indigo-50' },
+const TIER_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string; bg: string }> = {
+  'bronze': { label: 'Bronze', icon: <Icon name="bronze" size={20} />, color: '#CD7F32', bg: 'bg-amber-50' },
+  'silver': { label: 'Silver', icon: <Icon name="silver" size={20} />, color: '#94A3B8', bg: 'bg-gray-50' },
+  'gold': { label: 'Gold', icon: <Icon name="gold" size={20} />, color: '#5D4037', bg: 'bg-amber-50' },
+  'diamond': { label: 'Diamond', icon: <Icon name="diamond" size={20} />, color: '#312E81', bg: 'bg-indigo-50' },
 };
 
 const TIER_ORDER = ['bronze', 'silver', 'gold', 'diamond'];
@@ -134,7 +135,7 @@ export default function MilestonesScreen() {
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-surface">
-        <ActivityIndicator size="large" color="#A16207" />
+        <ActivityIndicator size="large" color="#5D4037" />
         <Text className="mt-4 text-body-md text-text-secondary">Loading achievements...</Text>
       </View>
     );
@@ -165,7 +166,9 @@ export default function MilestonesScreen() {
     <View className="flex-1 bg-surface">
       {/* Header */}
       <View className="px-4 pt-4 pb-2">
-        <Text className="text-headline-lg text-text font-headline">🏆 Achievements</Text>
+        <Text className="text-headline-lg text-text font-headline">
+          <Icon name="diamond" size={20} color="#312E81" /> Achievements
+        </Text>
         <Text className="text-body-md text-text-secondary mt-1">
           Every milestone tells a story
         </Text>
@@ -184,7 +187,7 @@ export default function MilestonesScreen() {
             <View className="h-2 bg-gray-300 rounded-full" style={{ width: '0%' }} />
           </View>
           <Text className="text-xs text-text-muted mt-1 text-center">
-            🔒 All locked — coming in V2.5
+            <Icon name="info" size={12} color="#64748B" /> All locked — coming in V2.5
           </Text>
         </View>
       </View>
@@ -262,7 +265,7 @@ export default function MilestonesScreen() {
                     <View className="p-3">
                       {/* Lock + Name + Thematic Hint */}
                       <View className="flex-row items-start mb-2">
-                        <Text className="text-base mr-2 mt-0.5">🔒</Text>
+                        <Icon name="info" size={16} color="#64748B" />
                         <View className="flex-1">
                           <Text className="text-headline-sm text-text font-headline" numberOfLines={1}>
                             {item.name}
@@ -295,7 +298,7 @@ export default function MilestonesScreen() {
                           onPress={() => openClue(item.id)}
                           className="ml-auto p-1"
                         >
-                          <Text className="text-sm text-text-muted">ℹ️</Text>
+                          <Icon name="info" size={14} color="#64748B" />
                         </Pressable>
                       </View>
 
@@ -303,7 +306,7 @@ export default function MilestonesScreen() {
                       {msgExpanded && item.educational_message && (
                         <View className="mt-2 p-3 bg-surface-alt rounded-card">
                           <Text className="text-xs text-primary font-label mb-1">
-                            📚 Did You Know?
+                            <Icon name="info" size={14} color="#5D4037" /> Did You Know?
                           </Text>
                           <Text className="text-body-sm text-text-secondary">
                             {item.educational_message}

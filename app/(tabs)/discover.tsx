@@ -8,11 +8,15 @@ import {
   Pressable,
   Animated,
   ActivityIndicator,
-  FlatList,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import ProductCard from '@/components/ProductCard';
 import { useRouter } from 'expo-router';
 import { supabase, Product, getProductImageUrl } from '@/lib/api';
 import ViewToggle, { ViewMode } from '@/components/ViewToggle';
+import DiscoverGrid from '@/components/DiscoverGrid';
+import ProductPreviewSheet from '@/components/ProductPreviewSheet';
+import { Icon } from '@/components/Icon';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.25;
@@ -31,6 +35,10 @@ export default function DiscoverScreen() {
   const [viewMode, setViewMode] = useState<ViewMode>('tinder');
   const [feedPage, setFeedPage] = useState(0);
   const [feedLoading, setFeedLoading] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [anchorProductName, setAnchorProductName] = useState<string | null>(null);
+  const [previewProduct, setPreviewProduct] = useState<Product | null>(null);
+  const [isPreviewVisible, setIsPreviewVisible] = useState(false);
 
   const translateX = useRef(new Animated.Value(0)).current;
   const rotate = translateX.interpolate({
@@ -47,23 +55,106 @@ export default function DiscoverScreen() {
     setImageError(false);
   }, [currentIndex]);
 
-  const loadProducts = async () => {
+  const loadProducts = async (selectedId?: string) => {
     try {
       setLoading(true);
+      // Fetch more products for similarity filtering
       const { data, error } = await supabase
         .from('mv_product_browse')
         .select('*')
         .gte('base_score', '70')
         .order('base_score', { ascending: false })
-        .limit(50);
+        .limit(200);
 
       if (error) throw error;
-      const shuffled = (data || []).sort(() => Math.random() - 0.5);
+      let shuffled = (data || []).sort(() => Math.random() - 0.5);
+
+      if (selectedId) {
+        // Find selected product
+        const selectedProduct = shuffled.find(p => p.id === selectedId);
+        if (selectedProduct) {
+          const selectedCategories = selectedProduct.product_category || [];
+          // Split into similar and opposite
+          const similar = [];
+          const opposite = [];
+          for (const product of shuffled) {
+            if (product.id === selectedId) continue;
+            const categories = product.product_category || [];
+            const hasCommon = categories.some((c: string) => selectedCategories.includes(c));
+            if (hasCommon) {
+              similar.push(product);
+            } else {
+              opposite.push(product);
+            }
+          }
+          // Shuffle each group
+          const shuffledSimilar = similar.sort(() => Math.random() - 0.5);
+          const shuffledOpposite = opposite.sort(() => Math.random() - 0.5);
+          // Take 70% from similar, 30% from opposite
+          const totalDesired = Math.min(shuffled.length, 50); // Keep same total count
+          const similarCount = Math.floor(totalDesired * 0.7);
+          const oppositeCount = totalDesired - similarCount;
+          const selectedSimilar = shuffledSimilar.slice(0, similarCount);
+          const selectedOpposite = shuffledOpposite.slice(0, oppositeCount);
+          shuffled = [...selectedSimilar, ...selectedOpposite].sort(() => Math.random() - 0.5);
+        }
+      }
+
       setProducts(shuffled);
     } catch (err) {
       console.error('Load products error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleProductPress = (productId: string) => {
+    const product = products.find(p => p.id === productId);
+    setSelectedProductId(productId);
+    
+    // Grid mode: refresh grid with new recommendations (no navigation)
+    if (viewMode === 'grid') {
+      setAnchorProductName(product?.name_display || null);
+      loadProducts(productId);
+      return;
+    }
+    
+    // Feed/Tinder mode: navigate to detail page
+    setAnchorProductName(null);
+    loadProducts(productId);
+    router.push(`/detail/${productId}`);
+  };
+
+  // Long press handler - show BottomSheet preview (Grid mode only)
+  const handleProductLongPress = (productId: string) => {
+    if (viewMode !== 'grid') return;
+    
+    const product = products.find(p => p.id === productId);
+    if (product) {
+      setPreviewProduct(product);
+      setIsPreviewVisible(true);
+    }
+  };
+
+  // Preview sheet handlers
+  const handleClosePreview = () => {
+    setIsPreviewVisible(false);
+    setTimeout(() => setPreviewProduct(null), 300);
+  };
+
+  const handlePreviewViewDetails = () => {
+    if (previewProduct) {
+      router.push(`/detail/${previewProduct.id}`);
+    }
+  };
+
+  const handlePreviewFavorite = () => {
+    if (previewProduct) {
+      setLiked(prev =>
+        prev.includes(previewProduct.id)
+          ? prev.filter(id => id !== previewProduct.id)
+          : [...prev, previewProduct.id]
+      );
     }
   };
 
@@ -91,57 +182,38 @@ export default function DiscoverScreen() {
 
   const currentProduct = products[currentIndex];
 
-  // Feed Item Component for Grid View
-  const FeedItem = useCallback(({ item }: { item: Product }) => {
-    const imageUrl = getProductImageUrl(item.id);
-    const score = parseFloat(item.base_score);
-    const isFav = liked.includes(item.id);
 
-    return (
-      <Pressable
-        style={styles.feedItem}
-        onPress={() => router.push(`/detail/${item.id}`)}
-      >
-        <View style={styles.feedImageContainer}>
-          {imageUrl ? (
-            <Image source={{ uri: imageUrl }} style={styles.feedImage} resizeMode="cover" />
-          ) : (
-            <Text style={styles.feedEmoji}>🧸</Text>
-          )}
-          {isFav && (
-            <View style={styles.feedFavBadge}>
-              <Text>❤️</Text>
-            </View>
-          )}
-        </View>
-        <View style={styles.feedInfo}>
-          <Text style={styles.feedName} numberOfLines={2}>{item.name_display}</Text>
-          <Text style={styles.feedBrand} numberOfLines={1}>{item.brand_name}</Text>
-          <View style={styles.feedScoreRow}>
-            <Text style={styles.feedScore}>⭐ {score.toFixed(0)}</Text>
-            {item.scraped_price && (
-              <Text style={styles.feedPrice}>${item.scraped_price}</Text>
-            )}
-          </View>
-        </View>
-      </Pressable>
-    );
-  }, [liked]);
 
   // Feed View Component
   const FeedView = useCallback(() => {
     const feedProducts = products.slice(0, 30); // Show top 30 in feed
 
     return (
-      <FlatList
+      <FlashList
         data={feedProducts}
-        renderItem={({ item }) => <FeedItem item={item} />}
+        renderItem={({ item }) => (
+          <View style={{ flex: 1, margin: GRID_ITEM_SPACING / 2 }}>
+            <ProductCard
+              product={item}
+              onPress={() => handleProductPress(item.id)}
+              isFavorited={liked.includes(item.id)}
+              onFavoriteToggle={() => {
+                setLiked(prev =>
+                  prev.includes(item.id)
+                    ? prev.filter(id => id !== item.id)
+                    : [...prev, item.id]
+                );
+              }}
+            />
+          </View>
+        )}
         keyExtractor={(item) => item.id}
         numColumns={GRID_COLUMNS}
+
         contentContainerStyle={styles.feedContainer}
-        columnWrapperStyle={styles.feedRow}
+
         showsVerticalScrollIndicator={false}
-        onRefresh={loadProducts}
+        onRefresh={() => loadProducts()}
         refreshing={feedLoading}
         ListEmptyComponent={
           <View style={styles.center}>
@@ -150,12 +222,35 @@ export default function DiscoverScreen() {
         }
       />
     );
-  }, [products, FeedItem, feedLoading, loadProducts]);
+  }, [products, liked, feedLoading, loadProducts, router]);
+
+  // Grid View Component using DiscoverGrid
+  const GridView = useCallback(() => {
+    const gridProducts = products.slice(0, 30); // Show top 30 in grid
+
+    return (
+      <DiscoverGrid
+        products={gridProducts}
+        columns={3}
+        spacing={12}
+        onProductPress={handleProductPress}
+        onProductLongPress={handleProductLongPress}
+        selectedProductId={selectedProductId}
+        onRefresh={() => loadProducts()}
+        refreshing={feedLoading}
+        ListEmptyComponent={
+          <View style={styles.center}>
+            <Text style={styles.emptyText}>No products found</Text>
+          </View>
+        }
+      />
+    );
+  }, [products, selectedProductId, feedLoading, loadProducts, handleProductPress, handleProductLongPress]);
 
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#A16207" />
+        <ActivityIndicator size="large" color="#5D4037" />
         <Text style={styles.loadingText}>Curating your daily picks...</Text>
       </View>
     );
@@ -168,7 +263,7 @@ export default function DiscoverScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Discover</Text>
         <Text style={styles.headerSub}>
-          {viewMode === 'tinder' ? 'Daily curated picks' : `Browse top ${products.length} toys`}
+          {viewMode === 'tinder' ? 'Daily curated picks' : viewMode === 'grid' ? `Grid view: top ${products.length} toys` : `Browse top ${products.length} toys`}
         </Text>
       </View>
 
@@ -192,10 +287,33 @@ export default function DiscoverScreen() {
         ) : (
           <TinderCard product={currentProduct} />
         )
+      ) : viewMode === 'grid' ? (
+        // Grid Mode with anchor hint
+        <View style={{ flex: 1 }}>
+          {anchorProductName && (
+            <View style={styles.anchorHint}>
+              <Text style={styles.anchorName}>
+                🎯 Based on: <Text style={styles.anchorName}>{anchorProductName}</Text>
+              </Text>
+              <Text style={styles.anchorSubText}>70% similar • 30% different</Text>
+            </View>
+          )}
+          <GridView />
+        </View>
       ) : (
         // Feed Mode
         <FeedView />
       )}
+
+      {/* Product Preview BottomSheet */}
+      <ProductPreviewSheet
+        product={previewProduct}
+        isVisible={isPreviewVisible}
+        onClose={handleClosePreview}
+        onViewDetails={handlePreviewViewDetails}
+        onFavoriteToggle={handlePreviewFavorite}
+        isFavorited={previewProduct ? liked.includes(previewProduct.id) : false}
+      />
     </View>
   );
 }
@@ -263,7 +381,8 @@ function TinderCard({ product }: { product: Product }) {
           </Text>
 
           <View style={styles.scoreBadge}>
-            <Text style={styles.scoreText}>⭐ {score.toFixed(1)}/100</Text>
+            <Icon name="star-filled" size={14} color="#5D4037" />
+            <Text style={styles.scoreText}>{score.toFixed(1)}/100</Text>
           </View>
 
           {product.scraped_price && (
@@ -342,7 +461,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   refreshBtn: {
-    backgroundColor: '#A16207',
+    backgroundColor: '#5D4037',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
@@ -408,16 +527,14 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   scoreBadge: {
-    backgroundColor: '#A1620715',
+    backgroundColor: '#5D403715',
     alignSelf: 'flex-start',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 100,
-    marginTop: 12,
   },
   scoreText: {
     fontSize: 14,
-    color: '#A16207',
+    color: '#5D4037',
     fontWeight: '600',
   },
   price: {
@@ -569,7 +686,7 @@ const styles = StyleSheet.create({
   feedScore: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#A16207',
+    color: '#5D4037',
   },
   feedPrice: {
     fontSize: 14,
@@ -581,5 +698,24 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textAlign: 'center',
     marginTop: 40,
+  },
+  // Anchor hint styles
+  anchorHint: {
+    backgroundColor: '#5D403715',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginHorizontal: 20,
+    marginBottom: 8,
+    borderRadius: 10,
+  },
+  anchorName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#5D4037',
+  },
+  anchorSubText: {
+    fontSize: 11,
+    color: '#94A3B8',
+    marginTop: 2,
   },
 });

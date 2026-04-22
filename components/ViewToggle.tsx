@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 
-export type ViewMode = 'tinder' | 'feed';
+export type ViewMode = 'tinder' | 'feed' | 'grid';
 
 interface ViewToggleProps {
   mode: ViewMode;
@@ -30,6 +30,16 @@ export default function ViewToggle({ mode, onChange }: ViewToggleProps) {
           Browse All
         </Text>
       </Pressable>
+
+      <Pressable
+        style={[styles.option, mode === 'grid' && styles.activeOption]}
+        onPress={() => onChange('grid')}
+      >
+        <Text style={[styles.icon, mode === 'grid' && styles.activeIcon]}>⊞</Text>
+        <Text style={[styles.label, mode === 'grid' && styles.activeLabel]}>
+          Grid
+        </Text>
+      </Pressable>
     </View>
   );
 }
@@ -37,7 +47,7 @@ export default function ViewToggle({ mode, onChange }: ViewToggleProps) {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: '#F5F5F4',
+    backgroundColor: '#F5F5DC',     // surface.muted
     borderRadius: 12,
     padding: 3,
     marginHorizontal: 20,
@@ -54,8 +64,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   activeOption: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
+    backgroundColor: '#FFFFFF',     // surface.card
+    shadowColor: '#3E2723',         // primary.dark
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 2,
@@ -70,11 +80,11 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#64748B',
+    color: '#8D6E63',               // text.muted
     fontFamily: 'Inter',
   },
   activeLabel: {
-    color: '#1C1917',
+    color: '#3E2723',               // text.DEFAULT
     fontWeight: '600',
   },
 });

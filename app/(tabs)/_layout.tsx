@@ -1,12 +1,12 @@
 import { Tabs } from 'expo-router';
-import { Text } from 'react-native';
+import { Icon } from '@/components/Icon';
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#A16207',
+        tabBarActiveTintColor: '#5D4037',
         tabBarInactiveTintColor: '#9CA3AF',
         tabBarStyle: {
           backgroundColor: '#FFFFFF',
@@ -26,35 +26,35 @@ export default function TabLayout() {
         name="browse"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20 }}>🏠</Text>,
+          tabBarIcon: ({ color }) => <Icon name="home" size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="discover"
         options={{
           title: 'Discover',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20 }}>✨</Text>,
+          tabBarIcon: ({ color }) => <Icon name="search" size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="milestones"
         options={{
           title: 'Achievements',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20 }}>🏆</Text>,
+          tabBarIcon: ({ color }) => <Icon name="diamond" size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="slot"
         options={{
           title: 'Slots',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20 }}>🧩</Text>,
+          tabBarIcon: ({ color }) => <Icon name="toy" size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20 }}>👤</Text>,
+          tabBarIcon: ({ color }) => <Icon name="menu" size={24} color={color} />,
         }}
       />
     </Tabs>

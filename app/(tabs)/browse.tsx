@@ -101,7 +101,7 @@ export default function BrowseScreen() {
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-surface">
-        <ActivityIndicator size="large" color="#A16207" />
+        <ActivityIndicator size="large" color="#5D4037" />
         <Text className="mt-4 text-body-md text-text-secondary">Loading toys...</Text>
       </View>
     );
@@ -182,7 +182,7 @@ export default function BrowseScreen() {
               disabled={loadingMore}
             >
               {loadingMore ? (
-                <ActivityIndicator size="small" color="#6B7280" />
+                <ActivityIndicator size="small" color="#795548" />
               ) : (
                 <Text className="text-body-md text-text-secondary">Load More</Text>
               )}

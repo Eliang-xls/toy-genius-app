@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { fetchProductDetail, Product, getProductImageUrl } from '@/lib/api';
 import { isFavorite as checkFavorite, addFavorite, removeFavorite } from '@/lib/storage';
 import { useSlot } from '@/lib/contexts/SlotContext';
+import { Icon } from '@/components/Icon';
 
 // 8D score radar dimensions
 const DIMENSIONS = [
@@ -100,7 +101,7 @@ export default function DetailScreen() {
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-surface">
-        <ActivityIndicator size="large" color="#A16207" />
+        <ActivityIndicator size="large" color="#5D4037" />
       </View>
     );
   }
@@ -134,7 +135,7 @@ export default function DetailScreen() {
             <Text className="text-xl">{isFavorite ? '❤️' : '🤍'}</Text>
           </Pressable>
           <Pressable onPress={handleAddToSlot} className="p-2">
-            <Text className="text-xl">➕</Text>
+            <Icon name="add" size={24} color="#5D4037" />
           </Pressable>
           <Pressable className="p-2">
             <Text className="text-xl">📤</Text>
